@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dispatch-like Radar Puck</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; display: grid; grid-template-columns: 420px 1fr; gap: 16px; }
+    .panel { border: 1px solid #ddd; border-radius: 12px; padding: 12px; }
+    .row { display: grid; grid-template-columns: 1fr 60px; gap: 8px; align-items: center; margin: 6px 0; }
+    input[type="range"] { width: 100%; }
+    canvas { width: 100%; height: auto; border: 1px solid #ddd; border-radius: 12px; }
+    button { padding: 10px 12px; border-radius: 10px; border: 1px solid #bbb; background: #f7f7f7; cursor: pointer; }
+    button:active { transform: translateY(1px); }
+    .ok { color: #0a7; font-weight: 700; }
+    .no { color: #c22; font-weight: 700; }
+    .small { color: #666; font-size: 12px; }
+    .hint { margin-top: 10px; line-height: 1.35; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h3>Stats du personnage (zone BLEUE)</h3>
+    <div id="charControls"></div>
+
+    <h3 style="margin-top:14px;">Stats requises (cage de rebond)</h3>
+    <div id="reqControls"></div>
+
+    <div style="display:flex; gap:10px; margin-top:12px; align-items:center;">
+      <button id="rollBtn">Lancer le palet</button>
+      <div id="result" class="small">—</div>
+    </div>
+
+    <p class="small hint">
+      Règle: le palet <b>démarre au centre de la cage de rebond</b> (polygone requis), part dans une direction aléatoire,
+      rebondit sur les arêtes du requis, puis on vérifie la position finale :
+      <b>dans le BLEU = succès</b>, sinon échec.<br/>
+      (Durée minimale des rebonds : <b>3 secondes</b>.)
+    </p>
+  </div>
+
+  <div class="panel">
+    <canvas id="c" width="760" height="520"></canvas>
+  </div>
+
+<script>
+(() => {
+  const STATS = ["Force","Vigueur","Mobilité","Charisme","Intelligence"];
+  const maxStat = 10;
+
+  // --- UI state (exemples)
+  const char = { Force:2, Vigueur:5, Mobilité:3, Charisme:2, Intelligence:3 };
+  const req  = { Force:2, Vigueur:2, Mobilité:5, Charisme:5, Intelligence:2 };
+
+  const charControls = document.getElementById("charControls");
+  const reqControls  = document.getElementById("reqControls");
+  const resultEl     = document.getElementById("result");
+  const rollBtn      = document.getElementById("rollBtn");
+
+  function mkSlider(container, obj, key) {
+    const wrap = document.createElement("div");
+    wrap.className = "row";
+    const label = document.createElement("label");
+    label.textContent = key;
+    const val = document.createElement("div");
+    val.textContent = obj[key];
+    val.style.textAlign = "right";
+
+    const rng = document.createElement("input");
+    rng.type = "range";
+    rng.min = "0";
+    rng.max = String(maxStat);
+    rng.value = String(obj[key]);
+
+    rng.addEventListener("input", () => {
+      obj[key] = Number(rng.value);
+      val.textContent = obj[key];
+      draw();
+    });
+
+    wrap.appendChild(label);
+    wrap.appendChild(val);
+    container.appendChild(wrap);
+    container.appendChild(rng);
+  }
+
+  STATS.forEach(k => mkSlider(charControls, char, k));
+  STATS.forEach(k => mkSlider(reqControls,  req,  k));
+
+  // --- Canvas / geometry
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+
+  const cx = canvas.width * 0.55;
+  const cy = canvas.height * 0.52;
+  const R  = Math.min(canvas.width, canvas.height) * 0.38;
+
+  function degToRad(d){ return d * Math.PI / 180; }
+
+  function polygonFromStats(statsObj) {
+    const pts = [];
+    for (let i=0; i<STATS.length; i++) {
+      const a = degToRad(-90 + i * 360 / STATS.length);
+      const v = statsObj[STATS[i]] ?? 0;
+      const r = (v / maxStat) * R;
+      pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+    }
+    return pts;
+  }
+
+  function drawRadarGrid() {
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#d8d8d8";
+
+    // rings
+    for (let k=2; k<=10; k+=2) {
+      const rr = (k/maxStat)*R;
+      ctx.beginPath();
+      for (let i=0; i<STATS.length; i++) {
+        const a = degToRad(-90 + i * 360 / STATS.length);
+        const x = cx + rr * Math.cos(a);
+        const y = cy + rr * Math.sin(a);
+        if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    // axes + labels
+    ctx.strokeStyle = "#c9c9c9";
+    ctx.fillStyle = "#222";
+    ctx.font = "16px system-ui";
+    for (let i=0; i<STATS.length; i++) {
+      const a = degToRad(-90 + i * 360 / STATS.length);
+      const x1 = cx, y1 = cy;
+      const x2 = cx + R * Math.cos(a);
+      const y2 = cy + R * Math.sin(a);
+      ctx.beginPath();
+      ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+      ctx.stroke();
+
+      const lx = cx + (R + 26) * Math.cos(a);
+      const ly = cy + (R + 26) * Math.sin(a);
+      ctx.textAlign = Math.cos(a) > 0.3 ? "left" : (Math.cos(a) < -0.3 ? "right" : "center");
+      ctx.textBaseline = Math.sin(a) > 0.3 ? "top" : (Math.sin(a) < -0.3 ? "bottom" : "middle");
+      ctx.fillText(STATS[i], lx, ly);
+    }
+    ctx.restore();
+  }
+
+  function drawPolygon(pts, fill, stroke, width=2, alpha=0.35) {
+    ctx.save();
+    ctx.beginPath();
+    pts.forEach((p,i)=> i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+    ctx.closePath();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = width;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Ray casting point in polygon
+  function pointInPoly(pt, poly) {
+    let inside = false;
+    for (let i=0, j=poly.length-1; i<poly.length; j=i++) {
+      const xi = poly[i].x, yi = poly[i].y;
+      const xj = poly[j].x, yj = poly[j].y;
+      const intersect = ((yi > pt.y) !== (yj > pt.y)) &&
+        (pt.x < (xj - xi) * (pt.y - yi) / ((yj - yi) || 1e-9) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  // Closest point on segment
+  function closestPointOnSegment(p, a, b) {
+    const abx = b.x - a.x, aby = b.y - a.y;
+    const apx = p.x - a.x, apy = p.y - a.y;
+    const ab2 = abx*abx + aby*aby || 1e-9;
+    let t = (apx*abx + apy*aby) / ab2;
+    t = Math.max(0, Math.min(1, t));
+    return { x: a.x + t*abx, y: a.y + t*aby, t };
+  }
+
+  function norm(v){ return Math.hypot(v.x,v.y) || 1e-9; }
+  function dot(a,b){ return a.x*b.x + a.y*b.y; }
+  function sub(a,b){ return {x:a.x-b.x,y:a.y-b.y}; }
+  function add(a,b){ return {x:a.x+b.x,y:a.y+b.y}; }
+  function mul(a,s){ return {x:a.x*s,y:a.y*s}; }
+
+  // Reflect velocity over a unit normal vector
+  function reflect(v, nUnit) {
+    const d = dot(v, nUnit);
+    return sub(v, mul(nUnit, 2*d));
+  }
+
+  // Nearest edge to a point
+  function nearestEdge(poly, p) {
+    let best = { dist: Infinity, a:null, b:null, cp:null };
+    for (let i=0; i<poly.length; i++) {
+      const a = poly[i];
+      const b = poly[(i+1)%poly.length];
+      const cp = closestPointOnSegment(p, a, b);
+      const dx = p.x - cp.x, dy = p.y - cp.y;
+      const dist = Math.hypot(dx,dy);
+      if (dist < best.dist) best = { dist, a, b, cp };
+    }
+    return best;
+  }
+
+  // Centroïde d'un polygone (shoelace)
+  function polygonCentroid(poly) {
+    let a = 0, cxAcc = 0, cyAcc = 0;
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i];
+      const q = poly[(i + 1) % poly.length];
+      const cross = p.x * q.y - q.x * p.y;
+      a += cross;
+      cxAcc += (p.x + q.x) * cross;
+      cyAcc += (p.y + q.y) * cross;
+    }
+    a *= 0.5;
+    if (Math.abs(a) < 1e-9) {
+      // fallback: moyenne des sommets
+      const m = poly.reduce((acc, p) => ({x: acc.x + p.x, y: acc.y + p.y}), {x:0,y:0});
+      return { x: m.x / poly.length, y: m.y / poly.length };
+    }
+    return { x: cxAcc / (6 * a), y: cyAcc / (6 * a) };
+  }
+
+  function randomUnit() {
+    const a = Math.random() * Math.PI * 2;
+    return { x: Math.cos(a), y: Math.sin(a) };
+  }
+
+  // --- Puck simulation
+  const puck = {
+    active: false,
+    pos: {x: cx, y: cy},
+    vel: {x: 0, y: 0},
+    r: 8,
+    time: 0,
+    bounces: 0
+  };
+
+  function startRoll() {
+    const reqPoly = polygonFromStats(req);
+
+    puck.active = true;
+    puck.time = 0;
+    puck.bounces = 0;
+
+    // 1) Spawn AU CENTRE de la cage (centroïde)
+    const centerReq = polygonCentroid(reqPoly);
+
+    // Petit jitter pour éviter les cas "pile sur un axe/ligne"
+    puck.pos = {
+      x: centerReq.x + (Math.random() - 0.5) * 6,
+      y: centerReq.y + (Math.random() - 0.5) * 6
+    };
+
+    // Sécurité : si un cas bizarre arrive, replacer pile au centroïde
+    if (!pointInPoly(puck.pos, reqPoly)) puck.pos = { ...centerReq };
+
+    // 2) Direction random + vitesse initiale
+    const dir = randomUnit();
+    const speed = 320; // px/s (un peu punchy)
+    puck.vel = mul(dir, speed);
+
+    resultEl.textContent = "Jet en cours…";
+    resultEl.className = "small";
+  }
+
+  function update(dt) {
+    if (!puck.active) return;
+
+    const reqPoly = polygonFromStats(req);
+    const next = add(puck.pos, mul(puck.vel, dt));
+
+    // friction (le palet ralentit progressivement)
+    const friction = 0.988;
+    puck.vel = mul(puck.vel, friction);
+
+    // rebond sur la cage requise
+    if (!pointInPoly(next, reqPoly)) {
+      const edge = nearestEdge(reqPoly, next);
+
+      // direction de l'arête
+      const e = sub(edge.b, edge.a);
+
+      // normale (perpendiculaire) -> on la normalise
+      let n = { x: -e.y, y: e.x };
+      const nLen = norm(n);
+      n = { x: n.x / nLen, y: n.y / nLen };
+
+      // orienter la normale vers le point (edge -> puck)
+      const toP = sub(next, edge.cp);
+      if (dot(toP, n) < 0) n = mul(n, -1);
+
+      // réflexion de la vitesse
+      puck.vel = reflect(puck.vel, n);
+
+      // replacer légèrement à l'intérieur
+      puck.pos = sub(next, mul(n, puck.r + 0.8));
+
+      puck.bounces++;
+    } else {
+      puck.pos = next;
+    }
+
+    puck.time += dt;
+
+    // --- Conditions d'arrêt
+    const minDuration = 3.0;  // <= demande: au moins 3 secondes
+    const maxDuration = 6.0;  // sécurité
+    const speed = norm(puck.vel);
+
+    // On ne peut PAS s'arrêter avant minDuration
+    const canStop = puck.time >= minDuration;
+
+    if (canStop && (speed < 18 || puck.time > maxDuration || puck.bounces > 40)) {
+      puck.active = false;
+
+      const charPoly = polygonFromStats(char);
+      const ok = pointInPoly(puck.pos, charPoly);
+
+      resultEl.textContent = ok ? "✅ Succès (palet dans le BLEU)" : "❌ Échec (palet hors BLEU)";
+      resultEl.className = ok ? "ok" : "no";
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawRadarGrid();
+
+    const charPoly = polygonFromStats(char);
+    const reqPoly  = polygonFromStats(req);
+
+    // Cage requise (rebond)
+    drawPolygon(reqPoly, "#999", "#555", 2, 0.18);
+
+    // Zone perso (succès)
+    drawPolygon(charPoly, "#1e90ff", "#0b4fa6", 2.5, 0.25);
+
+    // Palet
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(puck.pos.x, puck.pos.y, puck.r, 0, Math.PI*2);
+    ctx.fillStyle = "#0b4fa6";
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#fff";
+    ctx.stroke();
+    ctx.restore();
+
+    // Légende
+    ctx.save();
+    ctx.font = "14px system-ui";
+    ctx.fillStyle = "#333";
+    ctx.fillText("BLEU = stats perso (réussite)", 14, 22);
+    ctx.fillText("GRIS = stats requises (rebond)", 14, 42);
+
+    // Infos runtime (optionnel)
+    ctx.fillStyle = "#666";
+    ctx.fillText(`temps: ${puck.time.toFixed(2)}s  rebonds: ${puck.bounces}`, 14, 62);
+    ctx.restore();
+  }
+
+  let last = performance.now();
+  function loop(t) {
+    const dt = Math.min(0.033, (t - last) / 1000);
+    last = t;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  rollBtn.addEventListener("click", startRoll);
+
+  draw();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
+
