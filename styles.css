@@ -45,6 +45,12 @@ body{
   background: linear-gradient(#fff6e7, var(--panel));
 }
 
+.panel-right {
+  display: flex;
+    flex-direction: column;
+    align-content: center;
+}
+
 .title{
   margin:0;
   font-size: 20px;
@@ -132,7 +138,7 @@ body{
 .result.no{ color: #c22; }
 
 .canvas-wrap{
-  padding: 14px;
+  padding: 14px 0 0 0;
 }
 
 canvas{
@@ -209,5 +215,11 @@ body::after{
   max-width: 220px;
   width: 100%;
   image-rendering: auto;
+}
+
+#c {
+  width: 100% !important;
+  height: auto !important;
+  padding-right: 7%;
 }
 
