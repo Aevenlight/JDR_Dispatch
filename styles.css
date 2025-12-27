@@ -1,0 +1,144 @@
+:root{
+  --bg: #081411;
+  --panel: #fff0d9;
+
+  --title: #301c02;
+  --text: #5a3a14;
+
+  --border-strong: rgba(48, 28, 2, 0.35);
+  --border-soft: rgba(48, 28, 2, 0.18);
+
+  --btn-bg: #f6e2c2;
+  --btn-bg2: #efd4ab;
+  --btn-border: rgba(48, 28, 2, 0.45);
+}
+
+*{ box-sizing: border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app{
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 14px;
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 16px;
+}
+
+.panel{
+  background: var(--panel);
+  border: 2px solid var(--border-strong);
+  border-radius: 10px;        /* carré mais pas brutal */
+  box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+
+.panel-header{
+  padding: 14px 14px 10px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  background: linear-gradient(#fff6e7, var(--panel));
+}
+
+.title{
+  margin:0;
+  font-size: 20px;
+  color: var(--title);
+  letter-spacing: 0.3px;
+}
+
+.subtitle{
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: rgba(90, 58, 20, 0.85);
+}
+
+.group{
+  padding: 12px 14px 6px 14px;
+}
+
+.group-title{
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: var(--title);
+  letter-spacing: 0.2px;
+}
+
+.controls{
+  display: grid;
+  gap: 6px;
+}
+
+.row{
+  display:grid;
+  grid-template-columns: 1fr 44px;
+  align-items:center;
+  gap: 10px;
+}
+
+.lbl{
+  font-size: 13px;
+  color: var(--title);
+}
+
+.val{
+  text-align:right;
+  font-weight: 700;
+  color: rgba(48, 28, 2, 0.85);
+}
+
+.rng{
+  width: 100%;
+  accent-color: #caa56b; /* juste pour harmoniser les sliders */
+}
+
+.actions{
+  padding: 12px 14px 14px 14px;
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  border-top: 1px solid var(--border-soft);
+  background: linear-gradient(var(--panel), #ffe7c4);
+}
+
+.btn{
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 2px solid var(--btn-border);
+  background: linear-gradient(var(--btn-bg), var(--btn-bg2));
+  color: var(--title);
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.25);
+}
+
+.btn:active{
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.25);
+}
+
+.result{
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(48,28,2,0.8);
+}
+
+.result.ok{ color: #0a7; }
+.result.no{ color: #c22; }
+
+.canvas-wrap{
+  padding: 14px;
+}
+
+canvas{
+  width: 100%;
+  height: auto;
+  display:block;
+  border-radius: 8px;
+  border: 2px solid var(--border-soft);
+}
