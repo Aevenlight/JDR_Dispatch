@@ -184,9 +184,18 @@
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
 
-  const cx = canvas.width * 0.55;
-  const cy = canvas.height * 0.52;
-  const R  = Math.min(canvas.width, canvas.height) * 0.38;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.width;
+  const cssH = canvas.height;
+  canvas.style.width = cssW + "px";
+  canvas.style.height = cssH + "px";
+  canvas.width = Math.floor(cssW * dpr);
+  canvas.height = Math.floor(cssH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const cx = cssW * 0.55;
+  const cy = cssH * 0.52;
+  const R  = Math.min(cssW, cssH) * 0.38;
 
   function deg(d){ return d * Math.PI / 180; }
   function add(a,b){ return {x:a.x+b.x,y:a.y+b.y}; }
@@ -272,10 +281,10 @@
   }
 
   function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(0,0,cssW,cssH);
 
     ctx.fillStyle = COL.panelBg;
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillRect(0,0,cssW,cssH);
 
     const outer = polygonFromStats({
       Force:10,Vigueur:10,Mobilité:10,Charisme:10,Intelligence:10
@@ -317,8 +326,12 @@
   function drawIcons(){
     if(!iconsReady) return;
 
-    const iconSize = 34;
-    const radius = R + 30;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    const iconSize = 56;
+    const radius = R + 44;
 
     for (let i=0; i<STATS.length; i++) {
       const key = STATS[i];
@@ -329,18 +342,10 @@
       const x = cx + Math.cos(a)*radius;
       const y = cy + Math.sin(a)*radius;
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x, y, iconSize/2 + 8, 0, Math.PI*2);
-      ctx.fillStyle = "rgba(255,240,217,0.92)";
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "rgba(48,28,2,0.35)";
-      ctx.stroke();
-
       ctx.drawImage(img, x - iconSize/2, y - iconSize/2, iconSize, iconSize);
-      ctx.restore();
     }
+
+    ctx.restore();
   }
 
   function drawPuck(){
