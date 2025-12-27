@@ -208,7 +208,6 @@ body::after{
   display: block;
   max-width: 220px;
   width: 100%;
-  margin: 0 auto 12px auto;
   image-rendering: auto;
 }
 
