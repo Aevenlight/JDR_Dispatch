@@ -17,7 +17,7 @@
 html,body{ height:100%; }
 body{
   margin:0;
-  font-family: Spectral SC", serif;
+  font-family: "Rajdhani", sans-serif;
   background: var(--bg);
   color: var(--text);
 }
@@ -141,4 +141,14 @@ canvas{
   display:block;
   border-radius: 8px;
   border: 2px solid var(--border-soft);
+}
+
+.char-name {
+  font-size: 3em;
+  font-weight: 900;
+}
+
+.portrait {
+  background: #595148;
+  border: solid #322a1f 3px;
 }
