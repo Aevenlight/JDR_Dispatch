@@ -1,0 +1,12 @@
+{
+  "id": "perso_01",
+  "nom": "Sonar",
+  "portrait": "portraits/perso_01.png",
+  "stats": {
+    "Force": 2,
+    "Vigueur": 1,
+    "Mobilité": 2,
+    "Charisme": 3,
+    "Intelligence": 4
+  }
+}

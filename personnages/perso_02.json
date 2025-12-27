@@ -1,0 +1,12 @@
+{
+  "id": "perso_02",
+  "nom": "Malevola",
+  "portrait": "portraits/perso_02.png",
+  "stats": {
+    "Force": 3,
+    "Vigueur": 2,
+    "Mobilité": 2,
+    "Charisme": 3,
+    "Intelligence": 2
+  }
+}

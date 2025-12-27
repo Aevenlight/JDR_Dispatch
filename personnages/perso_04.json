@@ -1,0 +1,12 @@
+{
+  "id": "perso_04",
+  "nom": "Prism",
+  "portrait": "portraits/perso_04.png",
+  "stats": {
+    "Force": 4,
+    "Vigueur": 1,
+    "Mobilité": 1,
+    "Charisme": 4,
+    "Intelligence": 2
+  }
+}
