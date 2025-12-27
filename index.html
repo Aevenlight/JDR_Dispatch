@@ -260,6 +260,78 @@
     return { x: v.x - 2*d*nUnit.x, y: v.y - 2*d*nUnit.y };
   }
 
+  let audioCtx = null;
+  const soundBuffers = { success: null, fail: null, bounces: [] };
+  let soundsLoaded = false;
+  let lastBounceSoundAt = 0;
+
+  function ensureAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  async function loadBuffer(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Sound missing: " + url);
+    const arr = await res.arrayBuffer();
+    return await audioCtx.decodeAudioData(arr);
+  }
+
+  async function loadSounds() {
+    if (soundsLoaded || !audioCtx) return;
+
+    const bounceFiles = Array.from({length:7}, (_,i)=>`sounds/PinBounce_0${i+1}.wav`);
+    const bouncePromises = bounceFiles.map(loadBuffer);
+
+    const [successBuf, failBuf, bounceBufs] = await Promise.all([
+      loadBuffer("sounds/Success.wav"),
+      loadBuffer("sounds/Fail.wav"),
+      Promise.all(bouncePromises)
+    ]);
+
+    soundBuffers.success = successBuf;
+    soundBuffers.fail = failBuf;
+    soundBuffers.bounces = bounceBufs;
+    soundsLoaded = true;
+  }
+
+  function playBuffer(buf, vol=0.35, rate=1) {
+    if (!audioCtx || !buf) return;
+    const src = audioCtx.createBufferSource();
+    const gain = audioCtx.createGain();
+    src.buffer = buf;
+    src.playbackRate.value = rate;
+    gain.gain.value = vol;
+    src.connect(gain).connect(audioCtx.destination);
+    src.start();
+  }
+
+  function playRandomBounce(impact=1) {
+    if (!soundsLoaded || soundBuffers.bounces.length === 0) return;
+
+    const now = performance.now();
+    if (now - lastBounceSoundAt < 55) return;
+    lastBounceSoundAt = now;
+
+    const idx = (Math.random() * soundBuffers.bounces.length) | 0;
+    const buf = soundBuffers.bounces[idx];
+
+    const vol = Math.min(0.45, 0.12 + 0.22 * impact);
+    const rate = 0.95 + Math.random() * 0.10;
+
+    playBuffer(buf, vol, rate);
+  }
+
+  function playSuccess() {
+    if (!soundsLoaded) return;
+    playBuffer(soundBuffers.success, 0.6, 1);
+  }
+
+  function playFail() {
+    if (!soundsLoaded) return;
+    playBuffer(soundBuffers.fail, 0.6, 1);
+  }
+
   const puck = {
     active:false,
     state:"idle",
@@ -308,10 +380,15 @@
       const toP = sub(next, edge.cp);
       if(dot(toP, n) < 0) n = { x: -n.x, y: -n.y };
 
+      const pre = norm(puck.vel);
       puck.vel = reflect(puck.vel, n);
-      puck.pos = sub(next, mul(n, puck.r + 0.8));
+      const post = norm(puck.vel);
+      const impact = Math.min(1, (pre + post) / (2 * START_SPEED));
 
+      puck.pos = sub(next, mul(n, puck.r + 0.8));
       puck.bounces++;
+
+      playRandomBounce(impact);
     } else {
       puck.pos = next;
     }
@@ -321,9 +398,11 @@
     const speed = norm(puck.vel);
     if(puck.time >= MIN_DURATION && (speed < STOP_SPEED || puck.time > MAX_DURATION || puck.bounces > MAX_BOUNCES)){
       puck.active = false;
-      puck.state = pointInPoly(puck.pos, polygonFromStats(char)) ? "success" : "fail";
-      resultEl.textContent = puck.state === "success" ? "Succès" : "Échec";
-      resultEl.className = "result " + (puck.state === "success" ? "ok" : "no");
+      const ok = pointInPoly(puck.pos, polygonFromStats(char));
+      puck.state = ok ? "success" : "fail";
+      resultEl.textContent = ok ? "Succès" : "Échec";
+      resultEl.className = "result " + (ok ? "ok" : "no");
+      if (ok) playSuccess(); else playFail();
     }
   }
 
@@ -414,7 +493,12 @@
     requestAnimationFrame(loop);
   }
 
-  rollBtn.addEventListener("click", startRoll);
+  rollBtn.addEventListener("click", async () => {
+    ensureAudio();
+    await loadSounds();
+    startRoll();
+  });
+
   loadIcons();
   loadCharacters();
   requestAnimationFrame(loop);
