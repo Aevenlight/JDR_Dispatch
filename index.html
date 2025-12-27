@@ -10,9 +10,6 @@
 
 <main class="app">
 
-  <!-- ===================== -->
-  <!-- PANNEAU GAUCHE -->
-  <!-- ===================== -->
   <section class="panel panel-left">
 
     <header class="panel-header">
@@ -20,7 +17,6 @@
       <p class="subtitle">Test de compétence</p>
     </header>
 
-    <!-- ===== Sélecteur de personnage ===== -->
     <div class="group">
       <h2 class="group-title">Personnage</h2>
 
@@ -33,13 +29,11 @@
       </div>
     </div>
 
-    <!-- ===== Stats requises ===== -->
     <div class="group">
       <h2 class="group-title">Stats requises</h2>
       <div id="reqControls" class="controls"></div>
     </div>
 
-    <!-- ===== Actions ===== -->
     <div class="actions">
       <button id="rollBtn" class="btn">Lancer</button>
       <div id="result" class="result">—</div>
@@ -47,9 +41,6 @@
 
   </section>
 
-  <!-- ===================== -->
-  <!-- PANNEAU DROIT -->
-  <!-- ===================== -->
   <section class="panel panel-right">
     <header class="panel-header">
       <h2 class="group-title">Résolution</h2>
@@ -64,10 +55,6 @@
 
 <script>
 (() => {
-
-  /* =====================================================
-     CONFIG
-  ===================================================== */
 
   const STATS = ["Force","Vigueur","Mobilité","Charisme","Intelligence"];
   const MAX_STAT = 10;
@@ -86,21 +73,14 @@
     "personnages/perso_03.json"
   ];
 
-  /* =====================================================
-     COULEURS / SIMU
-  ===================================================== */
-
   const COL = {
     panelBg: "#fff0d9",
     pentFill: "#322a1f",
     grid: "#615a43",
-
     charFill: "rgba(255,199,58,0.40)",
     charStroke: "rgba(255,199,58,1)",
-
     reqFill: "rgba(255,255,249,0.40)",
     reqStroke: "rgba(255,255,249,1)",
-
     puckRolling: "#000000",
     puckSuccess: "#6dc383",
     puckFail: "#f98277"
@@ -113,18 +93,10 @@
   const STOP_SPEED   = 18;
   const MAX_BOUNCES  = 40;
 
-  /* =====================================================
-     ETAT
-  ===================================================== */
-
   const char = { Force:0, Vigueur:0, Mobilité:0, Charisme:0, Intelligence:0 };
   const req  = { Force:2, Vigueur:2, Mobilité:5, Charisme:5, Intelligence:2 };
 
   let characters = [];
-
-  /* =====================================================
-     UI ELEMENTS
-  ===================================================== */
 
   const portraitImg = document.getElementById("portrait");
   const charNameEl  = document.getElementById("charName");
@@ -132,10 +104,6 @@
   const reqControls = document.getElementById("reqControls");
   const rollBtn     = document.getElementById("rollBtn");
   const resultEl    = document.getElementById("result");
-
-  /* =====================================================
-     SLIDERS STATS REQUISES
-  ===================================================== */
 
   function mkSlider(container, obj, key) {
     const row = document.createElement("div");
@@ -168,10 +136,6 @@
 
   STATS.forEach(k => mkSlider(reqControls, req, k));
 
-  /* =====================================================
-     CHARGEMENT PERSONNAGES
-  ===================================================== */
-
   async function loadCharacters() {
     const data = await Promise.all(
       CHARACTER_FILES.map(f => fetch(f).then(r => r.json()))
@@ -192,22 +156,15 @@
 
   function selectCharacter(index) {
     const c = characters[index];
-
     Object.assign(char, c.stats);
-
     portraitImg.src = c.portrait;
     charNameEl.textContent = c.nom;
-
     draw();
   }
 
   selectEl.addEventListener("change", e => {
     selectCharacter(e.target.value);
   });
-
-  /* =====================================================
-     CANVAS & GEOMETRIE
-  ===================================================== */
 
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
@@ -218,9 +175,7 @@
 
   function deg(d){ return d * Math.PI / 180; }
   function add(a,b){ return {x:a.x+b.x,y:a.y+b.y}; }
-  function sub(a,b){ return {x:a.x-b.x,y:a.y-b.y}; }
   function mul(v,s){ return {x:v.x*s,y:v.y*s}; }
-  function dot(a,b){ return a.x*b.x + a.y*b.y; }
   function norm(v){ return Math.hypot(v.x,v.y) || 1e-9; }
 
   function polygonFromStats(o){
@@ -247,10 +202,6 @@
     poly.forEach(p=>{x+=p.x;y+=p.y});
     return {x:x/poly.length,y:y/poly.length};
   }
-
-  /* =====================================================
-     PUCK
-  ===================================================== */
 
   const puck = {
     active:false,
@@ -305,10 +256,6 @@
     }
   }
 
-  /* =====================================================
-     DRAW
-  ===================================================== */
-
   function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -362,10 +309,6 @@
     ctx.fillStyle=c;
     ctx.fill();
   }
-
-  /* =====================================================
-     LOOP
-  ===================================================== */
 
   let last=performance.now();
   function loop(t){
