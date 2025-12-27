@@ -221,5 +221,6 @@ body::after{
   width: 100% !important;
   height: auto !important;
   padding-right: 7%;
+  border: none;
 }
 
